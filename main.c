@@ -343,24 +343,7 @@ int main(void)
     }
 
     // surface buffers
-    uint32_t color = useClientDecorations ? ToColor(127, 127, 127, 255) : ToColor(255, 255, 255, 255);
-    if (CreateSurfaceBuffer(&window->surfaceBuffer, window->surface, "WaylandClientWindow_Decorations", color) != 1) return 0;
-    if (useClientDecorations)
-    {
-        window->clientSurface = wl_compositor_create_surface(compositor);
-        window->clientSubSurface = wl_subcompositor_get_subsurface(subcompositor, window->clientSurface, window->surface);
-        wl_subsurface_set_desync(window->clientSubSurface);
-        wl_subsurface_set_position(window->clientSubSurface, DECORATIONS_BAR_SIZE, DECORATIONS_TOPBAR_SIZE);
-        if (CreateSurfaceBuffer(&window->clientSurfaceBuffer, window->clientSurface, "WaylandClientWindow_Client", ToColor(255, 255, 255, 255)) != 1) return 0;
-        DrawButtons();
-    }
-
-    // finalize surfaces
-    if (useClientDecorations)
-    {
-        wl_surface_damage(window->clientSurface, 0, 0, window->clientSurfaceBuffer.width, window->clientSurfaceBuffer.height);
-        wl_surface_commit(window->clientSurface);
-    }
+    
     wl_surface_damage(window->surface, 0, 0, window->surfaceBuffer.width, window->surfaceBuffer.height);
     wl_surface_commit(window->surface);
     wl_display_flush(display);
@@ -597,12 +580,30 @@ void pointer_axis(void *data, struct wl_pointer *pointer, uint32_t time, uint32_
 void xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial)
 {
     xdg_surface_ack_configure(xdg_surface, serial);
-    //if (decoration_manager != NULL) zxdg_toplevel_decoration_v1_set_mode(decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
-    // must commit here
-    if (useClientDecorations) wl_surface_commit(window->clientSurface);
+    static int initialized = 0;
+    if (!initialized)
+    {
+        uint32_t color = useClientDecorations ? ToColor(127,127,127,255) : ToColor(255,255,255,255);
+        CreateSurfaceBuffer(&window->surfaceBuffer, window->surface, "WaylandClientWindow_Decorations", color);
+
+        if (useClientDecorations)
+        {
+            CreateSurfaceBuffer(&window->clientSurfaceBuffer, window->clientSurface, "WaylandClientWindow_Client", ToColor(255,255,255,255));
+            DrawButtons();
+            wl_surface_damage(window->clientSurface, 0, 0, window->clientSurfaceBuffer.width, window->clientSurfaceBuffer.height);
+            wl_surface_commit(window->clientSurface);
+        }
+
+        wl_surface_damage(window->surface, 0, 0, window->surfaceBuffer.width, window->surfaceBuffer.height);
+        wl_surface_commit(window->surface);
+
+        initialized = 1;
+        return;
+    }
+
+    // commits normais depois
     wl_surface_commit(window->surface);
-    wl_display_flush(display);
 }
 
 void xdg_toplevelconfigure_bounds(void *data, struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height)
