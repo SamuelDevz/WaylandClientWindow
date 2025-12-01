@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.27)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_COMPILER /bin/g++)
-set(CMAKE_C_COMPILER /bin/gcc)
-
 project(WaylandClientWindow)
 
-add_executable(WaylandClientWindow main.c xdg-shell-client-protocol.c xdg-decoration-unstable-v1.c)
-target_link_libraries(WaylandClientWindow wayland-client wayland-cursor m)# wayland-egl GL EGL
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library(protocols STATIC xdg-shell-client-protocol.c xdg-decoration-unstable-v1.c)
+target_link_libraries(protocols PUBLIC wayland-client wayland-cursor)
+
+add_executable(WaylandClientWindow main.cpp)
+target_link_libraries(WaylandClientWindow PUBLIC protocols)
